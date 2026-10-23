@@ -54,6 +54,7 @@
     const svg = document.getElementById("chart");
 
     const W = 640, H = 280, PAD = 20;
+    let current = [];
 
     function currentFreq() {
       const raw = fused.params.get("freq");
@@ -80,8 +81,35 @@
 
       const axis = `<line x1="${PAD}" y1="${H / 2}" x2="${W - PAD}" y2="${H / 2}" stroke="#3a3d44" />`;
       const line = `<polyline points="${pointsToPolyline(points)}" fill="none" stroke="#aed6f1" stroke-width="2" />`;
-      svg.innerHTML = axis + line;
+      current = points;
+      svg.innerHTML = axis + line + '<g id="hover" style="display:none"><line id="hv" y1="0" y2="280" stroke="#5f6368" stroke-dasharray="4 3" /><circle id="hd" r="5" fill="#aed6f1" /><text id="ht" fill="#e8eaed" font-size="12"></text></g>';
     }
+
+    svg.addEventListener("mousemove", (e) => {
+      const g = svg.querySelector("#hover");
+      if (!g || !current.length) return;
+      const rect = svg.getBoundingClientRect();
+      const mx = (e.clientX - rect.left) * (W / rect.width);
+      const t = Math.min(1, Math.max(0, (mx - PAD) / (W - 2 * PAD)));
+      const [x, y] = current[Math.round(t * (current.length - 1))];
+      const px = PAD + x * (W - 2 * PAD);
+      const py = H / 2 - y * (H / 2 - PAD);
+      g.style.display = "";
+      g.querySelector("#hv").setAttribute("x1", px);
+      g.querySelector("#hv").setAttribute("x2", px);
+      const d = g.querySelector("#hd");
+      d.setAttribute("cx", px);
+      d.setAttribute("cy", py);
+      const label = g.querySelector("#ht");
+      label.setAttribute("x", px > W - 110 ? px - 105 : px + 10);
+      label.setAttribute("y", Math.min(Math.max(py - 10, 16), H - 8));
+      label.textContent = `x=${x.toFixed(2)}  y=${y.toFixed(2)}`;
+    });
+
+    svg.addEventListener("mouseleave", () => {
+      const g = svg.querySelector("#hover");
+      if (g) g.style.display = "none";
+    });
 
     slider.addEventListener("input", () => {
       fused.params.set("freq", slider.value);
